@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PC Remote Control</title>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --surface3: #25252d;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0eff4;
+    --muted: #8b8a96;
+    --muted2: #5e5d68;
+    --accent: #7c6af7;
+    --accent2: #5ddcb0;
+    --danger: #e85b5b;
+    --warn: #e8a254;
+    --success: #5ddcb0;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --radius-xs: 5px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem 5rem}
+
+  .header{text-align:center;margin-bottom:1.75rem}
+  .header h1{font-size:1.65rem;font-weight:600;letter-spacing:-0.5px}
+  .header h1 span{color:var(--accent)}
+  .header p{color:var(--muted);font-size:0.85rem;margin-top:.3rem}
+
+  .connect-bar{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem 1.2rem;width:100%;max-width:600px;margin-bottom:1.25rem;display:flex;flex-direction:column;gap:.7rem}
+  .connect-bar label{font-size:.78rem;color:var(--muted)}
+  .row{display:flex;gap:.5rem}
+  .row input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:.88rem;padding:.5rem .8rem;outline:none;transition:border .2s}
+  .row input:focus{border-color:var(--accent)}
+  .btn-connect{background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;cursor:pointer;font-size:.85rem;font-weight:500;padding:0 1.1rem;transition:opacity .2s,transform .1s;white-space:nowrap}
+  .btn-connect:hover{opacity:.85}
+  .btn-connect:active{transform:scale(.97)}
+
+  .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;padding:3px 10px;border-radius:99px;border:1px solid var(--border2);color:var(--muted);align-self:flex-start}
+  .status-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .3s}
+  .status-pill.connected .dot{background:var(--success)}
+  .status-pill.connected{color:var(--success);border-color:rgba(93,220,176,.25)}
+  .status-pill.error .dot{background:var(--danger)}
+  .status-pill.error{color:var(--danger);border-color:rgba(232,91,91,.25)}
+
+  .tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:5px;width:100%;max-width:600px;margin-bottom:1.25rem}
+  .tab{flex:1;background:transparent;border:none;border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;font-size:.83rem;font-weight:500;padding:.5rem;transition:background .2s,color .2s}
+  .tab:hover{color:var(--text)}
+  .tab.active{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}
+
+  .panel{display:none;width:100%;max-width:600px}
+  .panel.active{display:block}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:.85rem}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem;display:flex;flex-direction:column;gap:.65rem;transition:border-color .2s,background .2s}
+  .card:hover{border-color:var(--border2);background:var(--surface2)}
+  .card.wide{grid-column:1/-1}
+  .card-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+  .card-icon.purple{background:rgba(124,106,247,.15)}
+  .card-icon.red{background:rgba(232,91,91,.15)}
+  .card-icon.warn{background:rgba(232,162,84,.15)}
+  .card-icon.green{background:rgba(93,220,176,.15)}
+  .card-icon.blue{background:rgba(84,165,232,.15)}
+  .card h3{font-size:.9rem;font-weight:600}
+  .card p{font-size:.78rem;color:var(--muted);line-height:1.45}
+
+  .btn{border:1px solid var(--border2);border-radius:var(--radius-sm);background:transparent;color:var(--text);cursor:pointer;font-size:.83rem;font-weight:500;padding:.45rem .9rem;transition:background .18s,transform .1s;text-align:center;white-space:nowrap}
+  .btn:hover{background:rgba(255,255,255,.07)}
+  .btn:active{transform:scale(.97)}
+  .btn.danger{border-color:rgba(232,91,91,.4);color:var(--danger)}
+  .btn.danger:hover{background:rgba(232,91,91,.1)}
+  .btn.warn{border-color:rgba(232,162,84,.4);color:var(--warn)}
+  .btn.warn:hover{background:rgba(232,162,84,.1)}
+  .btn.primary{border-color:rgba(124,106,247,.5);color:var(--accent)}
+  .btn.primary:hover{background:rgba(124,106,247,.1)}
+  .btn.success{border-color:rgba(93,220,176,.4);color:var(--success)}
+  .btn.success:hover{background:rgba(93,220,176,.1)}
+  .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+  .btn-row{display:flex;gap:.5rem;flex-wrap:wrap}
+
+  .vol-row{display:flex;align-items:center;gap:.6rem}
+  .vol-row input[type=range]{flex:1;accent-color:var(--accent2);cursor:pointer}
+  .vol-label{font-size:.82rem;color:var(--muted);min-width:34px;text-align:right}
+
+  /* ── Admin warning banner ── */
+  .admin-banner{display:flex;align-items:center;gap:.6rem;background:rgba(232,162,84,.08);border:1px solid rgba(232,162,84,.3);border-radius:var(--radius-sm);padding:.6rem .85rem;font-size:.8rem;color:var(--warn);margin-bottom:.85rem}
+  .admin-banner.hidden{display:none}
+  .admin-banner strong{font-weight:600}
+
+  /* ── Blocker ── */
+  .toggle-wrap{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--muted)}
+  .toggle{position:relative;width:40px;height:22px;cursor:pointer}
+  .toggle input{opacity:0;width:0;height:0}
+  .slider-track{position:absolute;inset:0;background:var(--surface3);border-radius:99px;border:1px solid var(--border2);transition:background .25s}
+  .slider-track::before{content:'';position:absolute;width:16px;height:16px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:transform .25s,background .25s}
+  .toggle input:checked + .slider-track{background:rgba(93,220,176,.2);border-color:rgba(93,220,176,.4)}
+  .toggle input:checked + .slider-track::before{transform:translateX(18px);background:var(--success)}
+
+  .add-row{display:flex;gap:.5rem;margin-bottom:.85rem}
+  .add-row input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:.88rem;padding:.48rem .8rem;outline:none;transition:border .2s}
+  .add-row input:focus{border-color:var(--accent)}
+
+  .blocklist{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.5rem;max-height:220px;overflow-y:auto}
+  .block-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.45rem .75rem;font-size:.84rem}
+  .block-item span{display:flex;align-items:center;gap:.5rem}
+  .block-item .exe-dot{width:7px;height:7px;border-radius:50%;background:var(--danger);opacity:.7}
+  .block-item .remove-btn{background:transparent;border:none;color:var(--muted2);cursor:pointer;font-size:1rem;line-height:1;padding:0 2px;transition:color .15s}
+  .block-item .remove-btn:hover{color:var(--danger)}
+  .empty-msg{font-size:.82rem;color:var(--muted2);text-align:center;padding:1.5rem 0;border:1px dashed var(--border2);border-radius:var(--radius-sm)}
+
+  .log-list{display:flex;flex-direction:column;gap:.3rem;max-height:150px;overflow-y:auto}
+  .log-item{display:flex;gap:.6rem;font-size:.78rem;background:var(--surface2);border-radius:var(--radius-xs);padding:.3rem .65rem}
+  .log-item .log-time{color:var(--muted2);min-width:52px}
+  .log-item .log-exe{color:var(--danger)}
+  .log-item .log-pid{color:var(--muted2)}
+
+  .proc-search{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:.85rem;padding:.45rem .8rem;outline:none;margin-bottom:.5rem;transition:border .2s}
+  .proc-search:focus{border-color:var(--accent)}
+  .proc-list{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:.25rem}
+  .proc-list-item{display:flex;align-items:center;justify-content:space-between;font-size:.8rem;padding:.3rem .6rem;border-radius:var(--radius-xs);cursor:pointer;transition:background .15s}
+  .proc-list-item:hover{background:var(--surface3)}
+  .proc-list-item .add-icon{color:var(--muted2);font-size:1rem;transition:color .15s}
+  .proc-list-item:hover .add-icon{color:var(--accent)}
+  .section-title{font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem}
+
+  #toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:.84rem;padding:.55rem 1.1rem;pointer-events:none;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;z-index:999;max-width:340px;text-align:center}
+  #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  #toast.ok{border-color:rgba(93,220,176,.4);color:var(--success)}
+  #toast.err{border-color:rgba(232,91,91,.4);color:var(--danger)}
+  #toast.warn{border-color:rgba(232,162,84,.4);color:var(--warn)}
+
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);align-items:center;justify-content:center;z-index:100}
+  .overlay.active{display:flex}
+  .dialog{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.6rem;max-width:320px;width:90%}
+  .dialog h4{font-size:.97rem;margin-bottom:.4rem}
+  .dialog p{font-size:.83rem;color:var(--muted);margin-bottom:1.15rem}
+  .dialog-btns{display:flex;gap:.5rem;justify-content:flex-end}
+  .btn-cancel{background:transparent;border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;font-size:.83rem;padding:.42rem .9rem}
+  .btn-cancel:hover{background:rgba(255,255,255,.06)}
+  .btn-ok{background:var(--danger);border:none;border-radius:var(--radius-sm);color:#fff;cursor:pointer;font-size:.83rem;font-weight:600;padding:.42rem .9rem}
+  .btn-ok:hover{opacity:.88}
+  code{font-size:.8em;background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px}
+  ::-webkit-scrollbar{width:4px;height:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+  .vstack{display:flex;flex-direction:column;gap:.85rem}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PC <span>Remote</span></h1>
+  <p>Control your Windows PC from the browser</p>
+</div>
+
+<div class="connect-bar">
+  <label>Server address &amp; secret token</label>
+  <div class="row">
+    <input id="server-url" type="text" placeholder="http://192.168.1.x:5000" value="http://localhost:5000"/>
+    <input id="token" type="password" placeholder="Secret token" value="change-me-please" style="max-width:160px"/>
+    <button class="btn-connect" onclick="testConnection()">Connect</button>
+  </div>
+  <span class="status-pill" id="status-pill">
+    <span class="dot"></span>
+    <span id="status-text">Not connected</span>
+  </span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('power')">⚡ Power</button>
+  <button class="tab" onclick="switchTab('volume')">🔊 Volume</button>
+  <button class="tab" onclick="switchTab('blocker')">🚫 Blocker</button>
+</div>
+
+<!-- POWER -->
+<div class="panel active" id="panel-power">
+  <div class="grid">
+    <div class="card"><div class="card-icon purple">🔒</div><h3>Lock session</h3><p>Lock the Windows user session immediately.</p><button class="btn primary" onclick="action('lock')">Lock now</button></div>
+    <div class="card"><div class="card-icon green">💤</div><h3>Sleep</h3><p>Put the PC into low-power sleep mode.</p><button class="btn" onclick="action('sleep')">Sleep</button></div>
+    <div class="card"><div class="card-icon blue">🌙</div><h3>Hibernate</h3><p>Save session to disk and power off.</p><button class="btn" onclick="action('hibernate')">Hibernate</button></div>
+    <div class="card"><div class="card-icon warn">🚪</div><h3>Log off</h3><p>Sign out the current Windows user.</p><button class="btn warn" onclick="confirm_action('logout','Log off','This will close all apps and sign out the current user.')">Log off</button></div>
+    <div class="card"><div class="card-icon warn">🔄</div><h3>Restart</h3><p>Reboot the PC. All unsaved work will be lost.</p><button class="btn warn" onclick="confirm_action('restart','Restart PC','All open apps will be closed and the PC will restart.')">Restart</button></div>
+    <div class="card"><div class="card-icon red">⏻</div><h3>Shut down</h3><p>Power off the PC. All unsaved work will be lost.</p><button class="btn danger" onclick="confirm_action('shutdown','Shut down','All open apps will be closed and the PC will power off.')">Shut down</button></div>
+    <div class="card"><div class="card-icon green">✋</div><h3>Cancel shutdown</h3><p>Abort a pending scheduled shutdown or restart.</p><button class="btn" onclick="action('cancel-shutdown')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- VOLUME -->
+<div class="panel" id="panel-volume">
+  <div class="vstack">
+    <div class="card">
+      <div class="card-icon purple">🔊</div>
+      <h3>System volume</h3>
+      <p>Requires <code>pycaw comtypes</code> — run <code>pip install pycaw comtypes</code> on your PC.</p>
+      <div class="vol-row" style="margin-top:.25rem">
+        <input type="range" min="0" max="100" value="50" id="vol-slider" oninput="document.getElementById('vol-label').textContent=this.value+'%'"/>
+        <span class="vol-label" id="vol-label">50%</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" style="flex:1" onclick="setVolume()">Set volume</button>
+        <button class="btn" onclick="fetchVolume()">↻ Sync</button>
+        <button class="btn" onclick="action('mute')">Toggle mute</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-icon green">⚡</div>
+      <h3>Quick set</h3>
+      <p>Jump to a common volume level instantly.</p>
+      <div class="btn-row">
+        <button class="btn" onclick="quickVol(0)">0%</button>
+        <button class="btn" onclick="quickVol(25)">25%</button>
+        <button class="btn" onclick="quickVol(50)">50%</button>
+        <button class="btn" onclick="quickVol(75)">75%</button>
+        <button class="btn" onclick="quickVol(100)">100%</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BLOCKER -->
+<div class="panel" id="panel-blocker">
+  <div class="vstack">
+
+    <!-- Admin warning -->
+    <div class="admin-banner hidden" id="admin-banner">
+      ⚠️ <span><strong>Not running as Administrator.</strong> Admin-level processes (games, browsers launched elevated) cannot be killed. Right-click <code>pc_control_server.py</code> → <em>Run as administrator</em>.</span>
+    </div>
+
+    <!-- Control -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <h3>Program blocker</h3>
+          <p style="margin-top:.25rem">Scans every 3 s and terminates blocked processes — including admin-elevated ones (when server runs as Admin).</p>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle">
+            <input type="checkbox" id="blocker-toggle" onchange="toggleBlocker()"/>
+            <span class="slider-track"></span>
+          </label>
+          <span id="blocker-state-label" style="min-width:44px">Off</span>
+        </div>
+      </div>
+      <button class="btn danger" onclick="action('blocker/kill-now')">⚡ Kill blocked now</button>
+    </div>
+
+    <!-- Add -->
+    <div class="card">
+      <p class="section-title">Add program to block</p>
+      <div class="add-row">
+        <input id="exe-input" type="text" placeholder="e.g. chrome.exe or steam"/>
+        <button class="btn primary" onclick="addExe()">Add</button>
+      </div>
+      <div id="blocklist-container"><div class="empty-msg">No programs blocked yet</div></div>
+    </div>
+
+    <!-- Running processes -->
+    <div class="card">
+      <p class="section-title">Running processes</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Click any process to instantly add it to the blocklist.</p>
+      <input class="proc-search" type="text" placeholder="Search processes…" id="proc-search" oninput="filterProcs()"/>
+      <div class="proc-list" id="proc-list">
+        <div style="font-size:.8rem;color:var(--muted2);text-align:center;padding:1rem">Press Refresh to load running processes</div>
+      </div>
+      <button class="btn" style="margin-top:.5rem" onclick="loadProcesses()">↻ Refresh processes</button>
+    </div>
+
+    <!-- Kill log -->
+    <div class="card">
+      <p class="section-title">Kill log (last 10)</p>
+      <div class="log-list" id="kill-log">
+        <div style="font-size:.8rem;color:var(--muted2);text-align:center;padding:.75rem">No kills recorded yet</div>
+      </div>
+      <button class="btn" style="margin-top:.5rem" onclick="refreshBlockerStatus()">↻ Refresh</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+<div class="overlay" id="overlay">
+  <div class="dialog">
+    <h4 id="dlg-title">Confirm</h4>
+    <p id="dlg-body">Are you sure?</p>
+    <div class="dialog-btns">
+      <button class="btn-cancel" onclick="closeDialog()">Cancel</button>
+      <button class="btn-ok" id="dlg-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let pendingAction = null;
+let allProcesses  = [];
+
+function getBase()  { return document.getElementById('server-url').value.replace(/\/$/, ''); }
+function getToken() { return document.getElementById('token').value; }
+function hdrs()     { return { 'Content-Type': 'application/json', 'X-Auth-Token': getToken() }; }
+
+async function apiFetch(path, method = 'POST', body = null) {
+  const opts = { method, headers: hdrs() };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(getBase() + '/' + path, opts);
+  return res.json();
+}
+
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = ''; }, 3400);
+}
+
+function setStatus(state, text) {
+  document.getElementById('status-pill').className = 'status-pill ' + state;
+  document.getElementById('status-text').textContent = text;
+}
+
+async function testConnection() {
+  setStatus('', 'Connecting…');
+  try {
+    const d = await apiFetch('status', 'GET');
+    if (d.success) {
+      const label = d.hostname + (d.is_admin ? ' 🛡' : ' ⚠ not admin');
+      setStatus('connected', 'Connected — ' + label);
+      toast('Connected to ' + d.hostname, 'ok');
+      refreshBlockerStatus();
+      fetchVolume();
+    } else {
+      setStatus('error', 'Auth failed');
+      toast('Wrong token or server error', 'err');
+    }
+  } catch {
+    setStatus('error', 'Unreachable');
+    toast('Cannot reach server — check IP and that the server is running.', 'err');
+  }
+}
+
+async function action(endpoint, body = null) {
+  try {
+    const d = await apiFetch(endpoint, 'POST', body);
+    if (d.success) toast(d.message || 'Done', 'ok');
+    else toast(d.message || 'Error', 'err');
+    if (endpoint.startsWith('blocker')) refreshBlockerStatus();
+  } catch {
+    toast('Network error — is the server running?', 'err');
+  }
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['power','volume','blocker'][i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+/* Volume */
+async function fetchVolume() {
+  try {
+    const d = await apiFetch('volume/get', 'GET');
+    if (d.success) {
+      document.getElementById('vol-slider').value = d.level;
+      document.getElementById('vol-label').textContent = d.level + '%';
+    }
+  } catch {}
+}
+function setVolume() { action('volume', { level: parseInt(document.getElementById('vol-slider').value, 10) }); }
+function quickVol(level) {
+  document.getElementById('vol-slider').value = level;
+  document.getElementById('vol-label').textContent = level + '%';
+  action('volume', { level });
+}
+
+/* Blocker */
+async function toggleBlocker() {
+  const checked = document.getElementById('blocker-toggle').checked;
+  try {
+    const d = await apiFetch('blocker/toggle', 'POST');
+    document.getElementById('blocker-toggle').checked = d.enabled;
+    document.getElementById('blocker-state-label').textContent = d.enabled ? 'On' : 'Off';
+    toast(d.message, 'ok');
+  } catch {
+    document.getElementById('blocker-toggle').checked = !checked;
+    toast('Failed to toggle blocker', 'err');
+  }
+}
+
+async function refreshBlockerStatus() {
+  try {
+    const d = await apiFetch('blocker/status', 'GET');
+    if (!d.success) return;
+    document.getElementById('blocker-toggle').checked = d.enabled;
+    document.getElementById('blocker-state-label').textContent = d.enabled ? 'On' : 'Off';
+    // Admin banner
+    const banner = document.getElementById('admin-banner');
+    banner.classList.toggle('hidden', d.is_admin !== false);
+    renderBlocklist(d.blocked || []);
+    renderKillLog(d.log || []);
+  } catch {}
+}
+
+function renderBlocklist(list) {
+  const c = document.getElementById('blocklist-container');
+  if (!list.length) { c.innerHTML = '<div class="empty-msg">No programs blocked yet</div>'; return; }
+  const wrap = document.createElement('div');
+  wrap.className = 'blocklist';
+  wrap.innerHTML = list.map(exe => `
+    <div class="block-item">
+      <span><span class="exe-dot"></span>${exe}</span>
+      <button class="remove-btn" onclick="removeExe('${exe}')" title="Remove">✕</button>
+    </div>`).join('');
+  c.innerHTML = '';
+  c.appendChild(wrap);
+}
+
+function renderKillLog(log) {
+  const el = document.getElementById('kill-log');
+  if (!log.length) { el.innerHTML = '<div style="font-size:.8rem;color:var(--muted2);text-align:center;padding:.75rem">No kills recorded yet</div>'; return; }
+  el.innerHTML = log.map(e => `
+    <div class="log-item">
+      <span class="log-time">${e.time}</span>
+      <span class="log-exe">${e.exe}</span>
+      <span class="log-pid">PID ${e.pid}</span>
+    </div>`).join('');
+}
+
+async function addExe() {
+  const inp = document.getElementById('exe-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  try {
+    const d = await apiFetch('blocker/add', 'POST', { exe: val });
+    if (d.success) { toast(d.message, 'ok'); inp.value = ''; renderBlocklist(d.blocked); }
+    else toast(d.message, 'err');
+  } catch { toast('Network error', 'err'); }
+}
+
+async function removeExe(exe) {
+  try {
+    const d = await apiFetch('blocker/remove', 'POST', { exe });
+    if (d.success) { toast(d.message, 'ok'); renderBlocklist(d.blocked); }
+    else toast(d.message, 'err');
+  } catch { toast('Network error', 'err'); }
+}
+
+document.getElementById('exe-input').addEventListener('keydown', e => { if (e.key === 'Enter') addExe(); });
+
+async function loadProcesses() {
+  const el = document.getElementById('proc-list');
+  el.innerHTML = '<div style="font-size:.8rem;color:var(--muted2);text-align:center;padding:1rem">Loading…</div>';
+  try {
+    const d = await apiFetch('processes', 'GET');
+    if (d.success) { allProcesses = d.processes; renderProcesses(allProcesses); }
+    else el.innerHTML = `<div style="font-size:.8rem;color:var(--danger);padding:.5rem">${d.message || 'Error'}</div>`;
+  } catch { el.innerHTML = '<div style="font-size:.8rem;color:var(--danger);padding:.5rem">Network error</div>'; }
+}
+
+function renderProcesses(list) {
+  const el = document.getElementById('proc-list');
+  if (!list.length) { el.innerHTML = '<div style="font-size:.8rem;color:var(--muted2);text-align:center;padding:1rem">No processes found</div>'; return; }
+  el.innerHTML = list.map(p => `
+    <div class="proc-list-item" onclick="addFromProcess('${p}')">
+      <span>${p}</span><span class="add-icon">+</span>
+    </div>`).join('');
+}
+
+function filterProcs() {
+  const q = document.getElementById('proc-search').value.toLowerCase();
+  renderProcesses(allProcesses.filter(p => p.includes(q)));
+}
+
+function addFromProcess(exe) { document.getElementById('exe-input').value = exe; addExe(); }
+
+function confirm_action(endpoint, title, body) {
+  pendingAction = endpoint;
+  document.getElementById('dlg-title').textContent = title;
+  document.getElementById('dlg-body').textContent = body;
+  document.getElementById('overlay').classList.add('active');
+  document.getElementById('dlg-ok').onclick = () => { closeDialog(); action(pendingAction); };
+}
+function closeDialog() { document.getElementById('overlay').classList.remove('active'); pendingAction = null; }
+document.getElementById('overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDialog(); });
+
+setInterval(() => {
+  if (document.getElementById('panel-blocker').classList.contains('active')) refreshBlockerStatus();
+}, 5000);
+</script>
+</body>
+</html>
